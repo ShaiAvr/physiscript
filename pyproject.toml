@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "physiscript"
+version = "0.1.0"
+description = ""
+authors = ["ShaiAvr <shaia1112011@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+# TODO: Add repository
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.13"
+numpy = "^1.26.0"
+pygame = "^2.5.2"
+moderngl = "^5.8.2"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.9.1"
+ruff = "^0.0.291"
+pre-commit = "^3.4.0"
+
+[tool.ruff]
+ignore = ["E402"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
