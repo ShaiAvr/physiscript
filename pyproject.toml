@@ -5,21 +5,35 @@ description = ""
 authors = ["ShaiAvr <shaia1112011@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-# TODO: Add repository
+packages = [{ include = "physiscript", from = "src" }]
+repository = "https://github.com/ShaiAvr/physiscript"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
 numpy = "^1.26.0"
-pygame = "^2.5.2"
 moderngl = "^5.8.2"
+pygame-ce = "^2.3.2"
+loguru = "^0.7.2"
+imgui = "^2.0.0"
+pyopengl = "^3.1.7"
+pyperclip = "^1.8.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.9.1"
 ruff = "^0.0.291"
 pre-commit = "^3.4.0"
+pytest = "^7.4.2"
 
 [tool.ruff]
 ignore = ["E402"]
+ignore-init-module-imports = true
+unfixable = ["ALL"]
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+testpaths = ["tests"]
 
 [build-system]
 requires = ["poetry-core"]
