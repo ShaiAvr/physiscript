@@ -1,17 +1,17 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import ClassVar
+from collections.abc import Iterator
+from typing import ClassVar, NamedTuple
+import re
 import webbrowser
 
 import imgui
 import pygame as pg
 import moderngl as mgl
+import loguru
 from loguru import logger
 
 import physiscript
-
-# noinspection PyProtectedMember
-from physiscript import _gui_log
 
 # noinspection PyProtectedMember
 from physiscript._internal.singleton import Singleton
@@ -38,11 +38,13 @@ class App(metaclass=Singleton):
     exit_on_escape: bool
     disable_tools_menubar: bool
 
-    _settings: _SettingsWindow
-    _user_guide: _UserGuideWindow
+    _log: _GUILog
+
+    _settings_window: _SettingsWindow
+    _user_guide_window: _UserGuideWindow
     _about: _AboutWindow
-    _log: _LogWindow
-    _stats: _StatsWindow
+    _log_window: _LogWindow
+    _stats_window: _StatsWindow
 
     _FALLBACK_FPS: int = 60
 
@@ -63,6 +65,20 @@ class App(metaclass=Singleton):
         self._clear_color = Color.create(clear_color)
         self.disable_tools_menubar = disable_tools_menubar
 
+        self._log = _GUILog()
+        logger.add(
+            self._log.add_entry,
+            level=0,
+            format=(
+                "<green>{time:DD.MM.YYYY HH:mm:ss.SSS}</> | "
+                "<level>{level: <8}</> | "
+                "<cyan>{name}</>:<cyan>{function}</>:<cyan>{line}</> - "
+                "<level>{message}</>"
+            ),
+            colorize=True,
+        )
+
+        logger.info("physiscript version: {}", physiscript.__version__)
         logger.info("Initializing the application")
         logger.trace("pygame version: {}", pg.version.ver)
         logger.trace("SDL version: {}", pg.version.SDL)
@@ -91,11 +107,11 @@ class App(metaclass=Singleton):
             self.fps = fps  # Trigger fps getter for validation
         self.title = title  # Trigger title getter to set window title
 
-        self._settings = _SettingsWindow()
-        self._user_guide = _UserGuideWindow()
+        self._settings_window = _SettingsWindow()
+        self._user_guide_window = _UserGuideWindow()
         self._about = _AboutWindow()
-        self._log = _LogWindow()
-        self._stats = _StatsWindow()
+        self._log_window = _LogWindow(self._log)
+        self._stats_window = _StatsWindow()
 
         logger.success("Application initialized successfully")
 
@@ -170,31 +186,33 @@ class App(metaclass=Singleton):
             if ui.begin_main_menu_bar():
                 self.main_menu_bar()
                 ui.end_main_menu_bar()
-        if self._settings.show:
-            self._settings.draw()
-        if self._log.show:
-            self._log.draw()
-        if self._user_guide.show:
-            self._user_guide.draw()
+        if self._settings_window.show:
+            self._settings_window.draw()
+        if self._log_window.show:
+            self._log_window.draw()
+        if self._user_guide_window.show:
+            self._user_guide_window.draw()
         if self._about.show:
             self._about.draw()
-        if self._stats.show:
-            self._stats.draw()
+        if self._stats_window.show:
+            self._stats_window.draw()
 
     def main_menu_bar(self) -> None:
         ui = self._ui
         if ui.begin_menu("Tools"):
-            _, self._stats.show = ui.menu_item(
-                self._stats.title, selected=self._stats.show
+            _, self._stats_window.show = ui.menu_item(
+                self._stats_window.title, selected=self._stats_window.show
             )
-            _, self._settings.show = ui.menu_item(
-                self._settings.title, selected=self._settings.show
+            _, self._settings_window.show = ui.menu_item(
+                self._settings_window.title, selected=self._settings_window.show
             )
-            _, self._log.show = ui.menu_item(self._log.title, selected=self._log.show)
+            _, self._log_window.show = ui.menu_item(
+                self._log_window.title, selected=self._log_window.show
+            )
             ui.end_menu()
         if ui.begin_menu("Help"):
-            _, self._user_guide.show = ui.menu_item(
-                self._user_guide.title, selected=self._user_guide.show
+            _, self._user_guide_window.show = ui.menu_item(
+                self._user_guide_window.title, selected=self._user_guide_window.show
             )
             _, self._about.show = ui.menu_item(
                 self._about.title, selected=self._about.show
@@ -217,6 +235,49 @@ class App(metaclass=Singleton):
         # Flip screen
         pg.display.flip()
         return self._clock.tick(self._fps)
+
+
+_ansi_escape_8bit = re.compile(
+    r"\x1B[@-Z\\-_]|[\x80-\x9A\x9C-\x9F]|(?:\x1B\[|\x9B)[0-?]*[ -/]*[@-~]"
+)
+
+
+class _LogEntry(NamedTuple):
+    level: int
+    message: str
+    display_message: str
+
+
+class _GUILog:
+    _logs: list[_LogEntry]
+
+    def __init__(self) -> None:
+        self._logs = []
+
+    def __getitem__(self, i: int) -> _LogEntry:
+        return self._logs[i]
+
+    def __len__(self) -> int:
+        return len(self._logs)
+
+    def __iter__(self) -> Iterator[_LogEntry]:
+        return iter(self._logs)
+
+    def clear(self) -> None:
+        self._logs.clear()
+
+    def filter(self, min_level: int = 0, filter_: str = "") -> Iterator[_LogEntry]:
+        return (e for e in self._logs if e.level >= min_level and filter_ in e.message)
+
+    def add_entry(self, message: loguru.Message) -> None:
+        display_message = str(message)
+        self._logs.append(
+            _LogEntry(
+                level=message.record["level"].no,
+                message=_ansi_escape_8bit.sub("", display_message),
+                display_message=display_message,
+            )
+        )
 
 
 class _Window(ABC):
@@ -330,6 +391,11 @@ class _LogWindow(_Window):
     auto_scroll: bool = True
     filter: str = ""
     level_index: int = level_names.index("Info")
+    log: _GUILog
+
+    def __init__(self, log: _GUILog) -> None:
+        super().__init__()
+        self.log = log
 
     def draw(self) -> None:
         ui: UIManager = App.get().ui()
@@ -349,13 +415,13 @@ class _LogWindow(_Window):
             ui.open_popup("Options")
         ui.same_line()
         if ui.button("Clear"):
-            _gui_log.clear()
+            self.log.clear()
         ui.same_line()
         if ui.button("Copy"):
             set_clipboard(
                 "".join(
                     e.message
-                    for e in _gui_log.filter(self.levels[self.level_index], self.filter)
+                    for e in self.log.filter(self.levels[self.level_index], self.filter)
                 )
             )
         ui.same_line()
@@ -366,7 +432,7 @@ class _LogWindow(_Window):
         _, self.filter = ui.text_input("Filter", self.filter)
         ui.separator()
         with ui.begin_child("Log", horizontal_scrollbar=True):
-            for e in _gui_log.filter(self.levels[self.level_index], self.filter):
+            for e in self.log.filter(self.levels[self.level_index], self.filter):
                 ui.text_ansi(e.display_message)
             if self.auto_scroll and ui.get_scroll_y() >= ui.get_scroll_max_y():
                 ui.set_scroll_here_y(1.0)
