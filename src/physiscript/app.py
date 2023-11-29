@@ -1,22 +1,25 @@
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from collections.abc import Iterator
-from typing import ClassVar, NamedTuple
+
 import re
 import webbrowser
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 import imgui
-import pygame as pg
-import moderngl as mgl
 import loguru
+import moderngl as mgl
+import pygame as pg
 from loguru import logger
 
 import physiscript
 
 # noinspection PyProtectedMember
 from physiscript._internal.singleton import Singleton
+from physiscript.ui import Condition, UIManager, UIStyle, WindowResizeMode
 from physiscript.utils import Color, ColorLike, set_clipboard
-from physiscript.ui import UIManager, UIStyle, WindowResizeMode, Condition
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 __all__ = ["App"]
 
@@ -48,7 +51,7 @@ class App(metaclass=Singleton):
 
     _FALLBACK_FPS: int = 60
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         width: int,
         height: int,
@@ -97,7 +100,7 @@ class App(metaclass=Singleton):
         except ValueError as e:
             message = f"{e}. Update your graphics drivers."
             logger.critical(message)
-            raise ValueError(message)
+            raise ValueError(message) from e
         self._clock = pg.time.Clock()
         self._ui = UIManager(width, height)
         if fps is None:
@@ -125,7 +128,7 @@ class App(metaclass=Singleton):
         if not cls._remove():
             return
         logger.info("Shutting down the app")
-        self._ui._shutdown()
+        self._ui._shutdown()  # noqa: SLF001
         self._ctx.release()
         pg.quit()
         logger.success("App was successfully shut down")
@@ -177,8 +180,8 @@ class App(metaclass=Singleton):
                 self.exit_on_escape and ev.type == pg.KEYDOWN and ev.key == pg.K_ESCAPE
             ):
                 self.running = False
-            self._ui._process_event(ev)
-        self._ui._process_inputs()
+            self._ui._process_event(ev)  # noqa: SLF001
+        self._ui._process_inputs()  # noqa: SLF001
 
     def _on_imgui_render(self) -> None:
         ui = self._ui
@@ -231,7 +234,7 @@ class App(metaclass=Singleton):
         # Rendering
         # Render UI
         self._on_imgui_render()
-        self._ui._render()
+        self._ui._render()  # noqa: SLF001
         # Flip screen
         pg.display.flip()
         return self._clock.tick(self._fps)
@@ -407,7 +410,7 @@ class _LogWindow(_Window):
         ui: UIManager = App.get().ui()
         # Options menu
         if ui.begin_popup("Options"):
-            _, self.auto_scroll = ui.check_box("Auto-scroll", self.auto_scroll)
+            _, self.auto_scroll = ui.check_box("Auto-scroll", checked=self.auto_scroll)
             ui.end_popup()
 
         # Main window

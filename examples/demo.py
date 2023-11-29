@@ -1,5 +1,6 @@
-import pygame as pg
+# ruff: noqa: T201, ERA001
 import moderngl as mgl
+import pygame as pg
 
 
 def main():

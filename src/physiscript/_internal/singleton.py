@@ -1,6 +1,7 @@
-from physiscript.errors import SingletonError
-
+# ruff: noqa: ANN204, ANN002, ANN003, ANN202
 from loguru import logger
+
+from physiscript.errors import SingletonError
 
 __all__ = ["Singleton"]
 

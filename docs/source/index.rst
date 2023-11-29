@@ -1,12 +1,14 @@
-physiscript
+===========
+PhysiScript
 ===========
 
 ..
    Mandatory
 .. toctree::
    :caption: Contents:
+   :titlesonly:
 
-   api
+   misc/index
 
 Indices and tables
 ==================

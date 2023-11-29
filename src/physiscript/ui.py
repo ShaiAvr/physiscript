@@ -1,17 +1,22 @@
+# ruff: noqa: PLR0913
 from __future__ import annotations
-from collections.abc import Callable, Iterator
+
 from contextlib import contextmanager
 from enum import Enum, auto
-from types import TracebackType
-from typing import Any, Self, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple, Self
 
-import pygame as pg
-from imgui.integrations.pygame import PygameRenderer
 import imgui
+from imgui.integrations.pygame import PygameRenderer
 
 # noinspection PyProtectedMember
 from physiscript._internal.singleton import Singleton
 from physiscript.utils import Color, ColorLike
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
+    from types import TracebackType
+
+    import pygame as pg
 
 __all__ = [
     "UIManager",
@@ -34,7 +39,7 @@ __all__ = [
 class UIStyle(Enum):
     @staticmethod
     def _generate_next_value_(
-        name: str, start: int, count: int, last_values: list[Any]
+        _name: str, _start: int, count: int, _last_values: list[Any]
     ) -> Any:
         return count
 
@@ -102,13 +107,7 @@ class UIManager(metaclass=Singleton):
         self._impl = PygameRenderer()
         self._io = imgui.get_io()
 
-        # print([name for name in dir(self._io.fonts) if name.startswith("get")])
-        # self._io.fonts.add_font_from_file_ttf(
-        #     r"D:\Downloads\Assistant\static\Assistant-Regular.ttf",
-        #     16,
-        #     self._io.fonts.get_glyph_ranges_chinese(),
-        # )
-        # self._impl.refresh_font_texture()
+        # TODO: Add glyphs. See https://github.com/pyimgui/pyimgui/issues/353
 
         self._io.display_size = (width, height)
         self._style = UIStyle.DARK  # Set to default ImGui style
@@ -142,7 +141,7 @@ class UIManager(metaclass=Singleton):
         flags |= menubar * imgui.WINDOW_MENU_BAR
         flags |= horizontal_scrollbar * imgui.WINDOW_HORIZONTAL_SCROLLING_BAR
         expanded, opened = imgui.begin(label, closable, flags)
-        return BeginEndPair(expanded, opened)
+        return BeginEndPair(expanded=expanded, opened=opened)
 
     def end(self) -> None:
         imgui.end()
@@ -168,7 +167,7 @@ class UIManager(metaclass=Singleton):
         flags |= horizontal_scrollbar * imgui.WINDOW_HORIZONTAL_SCROLLING_BAR
         # noinspection PyArgumentList
         return BeginEndChild(
-            imgui.begin_child(label, width, height, border, flags).visible
+            visible=imgui.begin_child(label, width, height, border, flags).visible
         )
 
     def end_child(self) -> None:
@@ -352,19 +351,19 @@ class UIManager(metaclass=Singleton):
         return changed, Color(*color)
 
     def begin_main_menu_bar(self) -> BeginEndMainMenuBar:
-        return BeginEndMainMenuBar(imgui.begin_main_menu_bar().opened)
+        return BeginEndMainMenuBar(opened=imgui.begin_main_menu_bar().opened)
 
     def end_main_menu_bar(self) -> None:
         imgui.end_main_menu_bar()
 
     def begin_menu_bar(self) -> BeginEndMenuBar:
-        return BeginEndMenuBar(imgui.begin_menu_bar().opened)
+        return BeginEndMenuBar(opened=imgui.begin_menu_bar().opened)
 
     def end_menu_bar(self) -> None:
         imgui.end_menu_bar()
 
-    def begin_menu(self, label: str, enabled: bool = True) -> BeginEndMenu:
-        return BeginEndMenu(imgui.begin_menu(label, enabled).opened)
+    def begin_menu(self, label: str, *, enabled: bool = True) -> BeginEndMenu:
+        return BeginEndMenu(opened=imgui.begin_menu(label, enabled).opened)
 
     def end_menu(self) -> None:
         imgui.end_menu()
@@ -373,6 +372,7 @@ class UIManager(metaclass=Singleton):
         self,
         label: str,
         shortcut_label: str | None = None,
+        *,
         selected: bool = False,
         enabled: bool = True,
     ) -> tuple[bool, bool]:
@@ -397,7 +397,7 @@ class UIManager(metaclass=Singleton):
         flags |= (not mouse_scroll) * imgui.WINDOW_NO_SCROLL_WITH_MOUSE
         flags |= disable_background * imgui.WINDOW_NO_BACKGROUND
         flags |= menubar * imgui.WINDOW_MENU_BAR
-        return BeginEndPopup(imgui.begin_popup(label, flags).opened)
+        return BeginEndPopup(opened=imgui.begin_popup(label, flags).opened)
 
     def end_popup(self) -> None:
         imgui.end_popup()
@@ -408,12 +408,13 @@ class UIManager(metaclass=Singleton):
     def is_popup_open(self, label: str) -> bool:
         return imgui.is_popup_open(label)
 
-    def close_current_popup(self):
+    def close_current_popup(self) -> None:
         imgui.close_current_popup()
 
     def begin_popup_modal(
         self,
         label: str,
+        *,
         move: bool = True,
         resize_mode: WindowResizeMode = WindowResizeMode.ALLOW_RESIZE,
         titlebar: bool = True,
@@ -436,12 +437,12 @@ class UIManager(metaclass=Singleton):
         flags |= horizontal_scrollbar * imgui.WINDOW_HORIZONTAL_SCROLLING_BAR
         # noinspection PyTypeChecker
         res = imgui.begin_popup_modal(label, None, flags)
-        return BeginEndPopupModal(res.opened, res.visible)
+        return BeginEndPopupModal(opened=res.opened, visible=res.visible)
 
     def button(self, label: str, width: float = 0, height: float = 0) -> bool:
         return imgui.button(label, width, height)
 
-    def check_box(self, label: str, checked: bool) -> tuple[bool, bool]:
+    def check_box(self, label: str, *, checked: bool) -> tuple[bool, bool]:
         return imgui.checkbox(label, checked)
 
     def same_line(self, position: float = 0.0, spacing: float = -1.0) -> None:
@@ -573,7 +574,7 @@ class BeginEndPair(_BeginEndWithProps):
 
     _props: _BeginEndProps
 
-    def __init__(self, expanded: bool, opened: bool) -> None:
+    def __init__(self, *, expanded: bool, opened: bool) -> None:
         self._props = _BeginEndProps(expanded, opened)
 
     def __repr__(self) -> str:
@@ -602,8 +603,8 @@ class BeginEndChild(_BeginEndBase):
 
     _visible: bool
 
-    def __init__(self, _visible: bool) -> None:
-        self._visible = _visible
+    def __init__(self, *, visible: bool) -> None:
+        self._visible = visible
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(opened={self._visible})"
@@ -630,7 +631,7 @@ class _BeginEndOpenedBase(_BeginEndBase):
 
     _opened: bool
 
-    def __init__(self, opened: bool) -> None:
+    def __init__(self, *, opened: bool) -> None:
         self._opened = opened
 
     def __repr__(self) -> str:
@@ -663,7 +664,7 @@ class BeginEndPopupModal(_BeginEndWithProps):
 
     _props: _BeginEndPopupModalProps
 
-    def __init__(self, opened: bool, visible: bool) -> None:
+    def __init__(self, *, opened: bool, visible: bool) -> None:
         self._props = _BeginEndPopupModalProps(opened, visible)
 
     def __repr__(self) -> str:

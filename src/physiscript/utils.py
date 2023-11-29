@@ -1,21 +1,72 @@
-"""Utility functions and classes.
-"""
+"""Utility functions and classes."""
 from __future__ import annotations
+
 from collections.abc import Sequence
-from typing import final, TypeAlias
+from typing import TypeAlias, final
 
 import pyperclip
 
 __all__ = ["Color", "ColorLike", "get_clipboard", "set_clipboard"]
 
 
+# noinspection PyShadowingNames
 @final
 class Color:
     """A utility class for representing colors and converting between color formats.
 
     A color is stored in *normalized RGBA* format. That is, all coordinates take values
-    between 0 and 1. The color's coordinates can be accessed by the :py:attr:`red`,
-    :py:attr:`green`, :py:attr:`blue` and :py:attr:`alpha` properties.
+    between 0 and 1 inclusive. The color's coordinates can be accessed by the
+    :py:attr:`red`, :py:attr:`green`, :py:attr:`blue` and :py:attr:`alpha` properties.
+
+    There are several convenience methods to create a :py:class:`Color` object from
+    various different formats and converting a :py:class:`Color` object to those
+    formats such as :py:meth:`from_rgb`, :py:meth:`rgb`, :py:meth:`from_html`,
+    :py:meth:`html` and more.
+
+    A :py:class:`Color` object can be constructed from an arbitrary Python object using
+    the :py:meth:`create` class method. Whenever the API requires a color, any object
+    supported by :py:meth:`create` can be passed instead. For example, the two following
+    lines of code are equivalent:
+
+    .. code-block:: python
+
+        app = App(1600, 900, clear_color="red")
+
+    and
+
+    .. code-block:: python
+
+        app = App(1600, 900, clear_color=Color(1, 0, 0))
+
+    Check the :py:meth:`create` method's documentation to see which objects can be
+    converted into colors and how they're converted.
+
+    Many common colors are predefined and can be accessed by their name using the
+    :py:meth:`get` method or as constants of the :py:class:`Color` class. For example:
+
+    .. code-block:: python
+
+        red = Color.get("red")
+        cyan = Color.CYAN
+
+    Check :doc:`this page </misc/colors>` to see a complete list of all predefined
+    colors and their names.
+
+    Parameters
+    ----------
+    red
+        The *red* coordinate of the color.
+    green
+        The *green* coordinate of the color.
+    blue
+        The *blue* coordinate of the color.
+    alpha
+        The *alpha* coordinate of the color. Defaults to 1.
+
+    Raises
+    ------
+    ValueError
+        If any of the coordinates are not between 0 and 1, inclusive.
     """
 
     __slots__ = ("_r", "_g", "_b", "_a")
@@ -35,8 +86,99 @@ class Color:
         self._b = blue
         self._a = alpha
 
+    @property
+    def red(self) -> float:
+        """The *red* coordinate of the color (between 0 and 1)."""
+        return self._r
+
+    @property
+    def green(self) -> float:
+        """The *green* coordinate of the color (between 0 and 1)."""
+        return self._g
+
+    @property
+    def blue(self) -> float:
+        """The *blue* coordinate of the color (between 0 and 1)."""
+        return self._b
+
+    @property
+    def alpha(self) -> float:
+        """The *alpha* coordinate of the color (between 0 and 1)."""
+        return self._a
+
+    def __repr__(self) -> str:
+        return (
+            f"{type(self).__name__}"
+            f"(red={self._r}, green={self._g}, blue={self._b}, alpha={self._a})"
+        )
+
     @classmethod
-    def create(cls, value: ColorLike) -> Color:
+    def create(cls, value: ColorLike) -> Color:  # noqa: PLR0911
+        """Create a :py:class:`Color` instance from any ``value``.
+
+        The following objects can be converted into a color:
+
+        * A :py:class:`Color` object, which is simply returned unchanged.
+        * A :external:py:class:`str` in one of the following formats:
+
+          * A name of a predefined color such as ``red`` or ``cyan``. See
+            :doc:`this page </misc/colors>` for a list of available colors.
+          * An HTML code of the form ``'#rrggbb'`` or ``'#rrggbbaa'`` where ``rr``,
+            ``gg``, ``bb`` and ``aa`` are hex numbers in the range 0 to 0xFF inclusive.
+            If ``aa`` (alpha) is not provided, it defaults to 0xFF.
+          * A hex code in the form ``'0xrrggbb'`` or ``'0xrrggbbaa'`` where ``rr``,
+            ``gg``, ``bb`` and ``aa`` are hex numbers in the range 0 to 0xFF inclusive.
+            If ``aa`` (alpha) is not provided, it defaults to 0xFF.
+
+        * A :external:py:class:`bytes`, :external:py:class:`bytearray` or
+          :external:py:class:`memoryview` objects of length 3 (RGB) or 4 (RGBA). Each
+          byte correspond to a color coordinate in the range 0-255. If the alpha
+          coordinate isn't provided, it defaults to 255.
+
+        * An :external:py:class:`int` value of the color to use. In hex representation,
+          the coordinates are read as ``0xrrggbbaa`` where ``rr``, ``gg``, ``bb`` and
+          ``aa`` are hex numbers in the range 0 to 0xFF. Note that in this format, the
+          value of ``aa`` (alpha) is required and can't be omitted.
+
+        * A :external:py:class:`~collections.abc.Sequence` (such as a
+          :external:py:class:`list` or a :external:py:class:`tuple`) of
+          :external:py:class:`float` of length 3 or 4. Each float is a normalized
+          coordinate in the range 0 to 1 inclusive. Passing such a sequence is
+          equivalent to ``Color(*value)``. If the alpha coordinate isn't provided, it
+          defaults to 1.
+
+        Whenever the API requires a color, any object supported by this method can be
+        given instead. In other words, the given value is implicitly converted into a
+        color using this method. Therefore, the line of code:
+
+        .. code-block:: python
+
+            app = App(1600, 900, clear_color=(0.08, 0.16, 0.18))
+
+        is equivalent to
+
+        .. code-block:: python
+
+            app = App(1600, 900, clear_color=Color.create((0.08, 0.16, 0.18)))
+
+        Parameters
+        ----------
+        value
+            The object to convert to a color. Can be any of the objects mentioned above.
+
+        Returns
+        -------
+        Color
+            The :py:class:`Color` created from the passed ``value``.
+
+        Raises
+        ------
+        ValueError
+            If the given ``value`` isn't in the correct format or any coordinate is out
+            of its range.
+        TypeError
+            If ``value`` is an object of a type that can't be converted into a color.
+        """
         if isinstance(value, Color):
             return value
         if isinstance(value, str):
@@ -48,6 +190,7 @@ class Color:
             color = cls._parse_html_color(value)
             if color is not None:
                 return color
+            # Check if it's a hex code
             color = cls._parse_hex_color(value)
             if color is not None:
                 return color
@@ -63,8 +206,202 @@ class Color:
         raise TypeError(f"Can't create color from '{value}'")
 
     @classmethod
+    def get(cls, name: str) -> Color | None:
+        """Get a predefined color by its name.
+
+        If the given name doesn't correspond to a predefined color,
+        :external:py:data:`None` is returned.
+
+        Parameters
+        ----------
+        name
+            The name of the color.
+
+        Returns
+        -------
+        Color or None
+            The color corresponding to ``name`` or :external:py:data:`None` if it
+            doesn't exist.
+
+        See Also
+        --------
+        names : Get a list of the names of predefined colors.
+        """
+        return _PRE_DEFINED_COLORS.get(name)
+
+    @classmethod
     def names(cls) -> list[str]:
+        """Get a list the names of predefined colors.
+
+        This method returns a list of names of all the predefined colors. For each name,
+        the corresponding :py:class:`Color` object can be obtained with the
+        :py:meth:`get` or :py:meth:`create` methods. :doc:`This page </misc/colors>`
+        contains a table of all the predefined colors and their names.
+
+        Returns
+        -------
+        list[str]
+            A list of the names of all the predefined colors.
+
+        See Also
+        --------
+        get : Get a predefined color by its name.
+        """
         return list(_PRE_DEFINED_COLORS.keys())
+
+    @classmethod
+    def from_rgb(cls, red: int, green: int, blue: int) -> Color:
+        """Create a color from RGB coordinates.
+
+        The RGB coordinates must be in the range 0 to 255, inclusive. The alpha
+        coordinate takes the value 255 (1.0 in normalized coordinates).
+
+        Parameters
+        ----------
+        red
+            The *red* coordinate.
+        green
+            The *green* coordinate.
+        blue
+            The *blue* coordinate.
+
+        Returns
+        -------
+        Color
+            A :py:class:`Color` object from the RGB coordinates.
+
+        Raises
+        ------
+        ValueError
+            If any of the coordinates isn't in the range 0 to 255, inclusive.
+        """
+        if not (0 <= red <= 255 and 0 <= green <= 255 and 0 <= blue <= 255):
+            raise ValueError("RGB coordinates must be between 0 and 255")
+        return cls(red / 255, green / 255, blue / 255)
+
+    def rgb(self) -> tuple[int, int, int]:
+        """Convert this color to an RGB tuple.
+
+        Returns
+        -------
+        tuple of int
+            A tuple of RGB coordinates of this color.
+        """
+        return (round(255 * self._r), round(255 * self._g), round(255 * self._b))
+
+    @classmethod
+    def from_rgba(cls, red: int, green: int, blue: int, alpha: int) -> Color:
+        """Create a color from RGBA coordinates.
+
+        The RGBA coordinates must be in the range 0 to 255, inclusive.
+
+        Parameters
+        ----------
+        red
+            The *red* coordinate.
+        green
+            The *green* coordinate.
+        blue
+            The *blue* coordinate.
+        alpha
+            The *alpha* coordinate.
+
+        Returns
+        -------
+        Color
+            A :py:class:`Color` object from the RGBA coordinates.
+
+        Raises
+        ------
+        ValueError
+            If any of the coordinates isn't in the range 0 to 255, inclusive.
+        """
+        if not (
+            0 <= red <= 255
+            and 0 <= green <= 255
+            and 0 <= blue <= 255
+            and 0 <= alpha <= 255
+        ):
+            raise ValueError("RGBA coordinates must be between 0 and 255")
+        return cls(red / 255, green / 255, blue / 255, alpha / 255)
+
+    def rgba(self) -> tuple[int, int, int, int]:
+        """Convert this color to an RGBA tuple.
+
+        Returns
+        -------
+        tuple of int
+            A tuple of RGBA coordinates of this color.
+        """
+        return (
+            round(255 * self._r),
+            round(255 * self._g),
+            round(255 * self._b),
+            round(255 * self._a),
+        )
+
+    @classmethod
+    def from_html(cls, color: str) -> Color:
+        color_obj = cls._parse_html_color(color)
+        if color_obj is None:
+            raise ValueError(f"Invalid HTML format for color {color}")
+        return color_obj
+
+    def html(self, *, include_alpha: bool = True) -> str:
+        return "#" + self._to_hex(include_alpha=include_alpha)
+
+    @classmethod
+    def from_hex(cls, color: str) -> Color:
+        color_obj = cls._parse_hex_color(color)
+        if color_obj is None:
+            raise ValueError(f"Invalid HEX format for color {color}")
+        return color_obj
+
+    def hex(self, *, include_alpha: bool = True) -> str:
+        return "0x" + self._to_hex(include_alpha=include_alpha)
+
+    @classmethod
+    def from_int(cls, color: int) -> Color:
+        if not (0 <= color <= 0xFFFFFFFF):
+            raise ValueError(
+                "An integer for an RGBA color must be between 0 and 0xFFFFFFFF"
+            )
+        r = (color >> 24) & 0xFF
+        g = (color >> 16) & 0xFF
+        b = (color >> 8) & 0xFF
+        a = color & 0xFF
+        return cls.from_rgba(r, g, b, a)
+
+    def int(self) -> int:
+        r, g, b, a = self.rgba()
+        return a + (b << 8) + (g << 16) + (r << 24)
+
+    def __int__(self) -> int:
+        return self.int()
+
+    @classmethod
+    def from_bytes(cls, color: BytesLike) -> Color:
+        if len(color) == 3:
+            return cls.from_rgb(*color)
+        if len(color) == 4:
+            return cls.from_rgba(*color)
+        raise ValueError(f"Invalid bytes format for color: '{bytes(color)}'")
+
+    def bytes(self, *, include_alpha: bool = True) -> bytes:
+        return bytes(self.rgba() if include_alpha else self.rgb())
+
+    def __bytes__(self) -> bytes:
+        return self.bytes(include_alpha=True)
+
+    def normalized_rgb(self) -> tuple[float, float, float]:
+        return (self._r, self._g, self._b)
+
+    def normalized_rgba(self) -> tuple[float, float, float, float]:
+        return (self._r, self._g, self._b, self._a)
+
+    def _to_hex(self, *, include_alpha: bool) -> str:
+        coords = self.rgba() if include_alpha else self.rgb()
+        return "".join(format(c, "02X") for c in coords)
 
     @classmethod
     def _parse_html_color(cls, color: str) -> Color | None:
@@ -97,104 +434,6 @@ class Color:
             if len(color_coords) == 4:
                 return cls.from_rgba(*color_coords)
             return None
-
-    @classmethod
-    def from_rgb(cls, red: int, green: int, blue: int) -> Color:
-        if not (0 <= red <= 255 and 0 <= green <= 255 and 0 <= blue <= 255):
-            raise ValueError("RGB coordinates must be between 0 and 255")
-        return cls(red / 255, green / 255, blue / 255)
-
-    @classmethod
-    def from_rgba(cls, red: int, green: int, blue: int, alpha: int) -> Color:
-        if not (
-            0 <= red <= 255
-            and 0 <= green <= 255
-            and 0 <= blue <= 255
-            and 0 <= alpha <= 255
-        ):
-            raise ValueError("RGBA coordinates must be between 0 and 255")
-        return cls(red / 255, green / 255, blue / 255, alpha / 255)
-
-    @classmethod
-    def from_html(cls, color: str) -> Color:
-        color_obj = cls._parse_html_color(color)
-        if color_obj is None:
-            raise ValueError(f"Invalid HTML format for color {color}")
-        return color_obj
-
-    @classmethod
-    def from_hex(cls, color: str) -> Color:
-        color_obj = cls._parse_hex_color(color)
-        if color_obj is None:
-            raise ValueError(f"Invalid HEX format for color {color}")
-        return color_obj
-
-    @classmethod
-    def from_int(cls, color: int) -> Color:
-        if not (0 <= color <= 0xFFFFFFFF):
-            raise ValueError(
-                "An integer for an RGBA color must be between 0 and 0xFFFFFFFF"
-            )
-        r = (color >> 24) & 0xFF
-        g = (color >> 16) & 0xFF
-        b = (color >> 8) & 0xFF
-        a = color & 0xFF
-        return cls.from_rgba(r, g, b, a)
-
-    @classmethod
-    def from_bytes(cls, color: BytesLike) -> Color:
-        if len(color) == 3:
-            return cls.from_rgb(*color)
-        if len(color) == 4:
-            return cls.from_rgba(*color)
-        raise ValueError(f"Invalid bytes format for color: '{bytes(color)}'")
-
-    @property
-    def red(self) -> float:
-        """The `red` coordinate of the color (between 0 and 1)."""
-        return self._r
-
-    @property
-    def green(self) -> float:
-        """The `green` coordinate of the color (between 0 and 1)."""
-        return self._g
-
-    @property
-    def blue(self) -> float:
-        """The `blue` coordinate of the color (between 0 and 1)."""
-        return self._b
-
-    @property
-    def alpha(self) -> float:
-        """The `alpha` coordinate of the color (between 0 and 1)."""
-        return self._a
-
-    def rgb(self) -> tuple[int, int, int]:
-        return (round(255 * self._r), round(255 * self._g), round(255 * self._b))
-
-    def rgba(self) -> tuple[int, int, int, int]:
-        return (
-            round(255 * self._r),
-            round(255 * self._g),
-            round(255 * self._b),
-            round(255 * self._a),
-        )
-
-    def normalized_rgb(self) -> tuple[float, float, float]:
-        return (self._r, self._g, self._b)
-
-    def normalized_rgba(self) -> tuple[float, float, float, float]:
-        return (self._r, self._g, self._b, self._a)
-
-    def __int__(self) -> int:
-        r, g, b, a = self.rgba()
-        return a + (b << 8) + (g << 16) + (r << 24)
-
-    def __repr__(self) -> str:
-        return (
-            f"{type(self).__name__}"
-            f"(red={self._r}, green={self._g}, blue={self._b}, alpha={self._a})"
-        )
 
     def __hash__(self) -> int:
         return hash((type(self), self._r, self._g, self._b, self._a))
@@ -880,6 +1119,9 @@ _PRE_DEFINED_COLORS: dict[str, Color] = {
     "yellow-green": Color.from_rgb(154, 205, 50),
 }
 _PRE_DEFINED_COLORS = dict(sorted(_PRE_DEFINED_COLORS.items()))
+
+for name, color in _PRE_DEFINED_COLORS.items():
+    setattr(Color, name.upper().replace("-", "_"), color)
 
 BytesLike: TypeAlias = bytes | bytearray | memoryview
 ColorLike: TypeAlias = Color | str | BytesLike | int | Sequence[float]

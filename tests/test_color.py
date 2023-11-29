@@ -1,10 +1,10 @@
-from physiscript.utils import Color
-
 import pytest
+
+from physiscript.utils import Color
 
 
 @pytest.mark.parametrize(
-    "created_color,expected_color",
+    ("created_color", "expected_color"),
     [
         (Color.create(Color(0.4, 0.5, 1)), Color(0.4, 0.5, 1)),
         (Color.create("red"), Color(1, 0, 0)),

@@ -1,8 +1,14 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python,pycharm+all
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,pycharm+all
 
+# pdm
+.pdm-python
+
 ## Dear ImGui artifacts
 imgui.ini
+
+# Sphinx
+docs/**/generated/
 
 ### PyCharm+all ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider

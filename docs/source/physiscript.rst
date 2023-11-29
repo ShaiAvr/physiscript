@@ -1,5 +1,0 @@
-physiscript
-===========
-
-.. automodule:: physiscript
-   :members:

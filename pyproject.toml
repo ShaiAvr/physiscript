@@ -1,48 +1,115 @@
-[tool.poetry]
+[project]
 name = "physiscript"
 version = "0.1.0"
-description = ""
-authors = ["ShaiAvr <shaia1112011@gmail.com>"]
-license = "MIT"
+description = ""  # TODO: Add description
+authors = [
+    {name = "Shai Avraham", email = "shaia1112011@gmail.com"},
+]
+dependencies = [
+    "numpy>=1.26.1",
+    "moderngl>=5.8.2",
+    "pygame-ce>=2.3.2",
+    "loguru>=0.7.2",
+    "imgui>=2.0.0",
+    "pyopengl>=3.1.7",
+    "pyperclip>=1.8.2",
+]
+requires-python = ">=3.11,<3.13"
 readme = "README.rst"
-packages = [{ include = "physiscript", from = "src" }]
-repository = "https://github.com/ShaiAvr/physiscript"
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX",
+    "Operating System :: Unix",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.11,<3.13"
-numpy = "^1.26.0"
-moderngl = "^5.8.2"
-pygame-ce = "^2.3.2"
-loguru = "^0.7.2"
-imgui = "^2.0.0"
-pyopengl = "^3.1.7"
-pyperclip = "^1.8.2"
+[project.urls]
+Repository = "https://github.com/ShaiAvr/physiscript"
 
-[tool.poetry.group.dev.dependencies]
-black = "^23.9.1"
-ruff = "^0.0.291"
-pre-commit = "^3.4.0"
+[tool.pdm]
+[tool.pdm.dev-dependencies]
+dev = [
+    "pre-commit>=3.5.0",
+    "rich>=13.6.0",
+    "rich-argparse>=1.4.0",
+]
+lint = [
+    "ruff>=0.1.3",
+]
+test = [
+    "pytest>=7.4.3",
+]
+docs = [
+    "sphinx>=7.2.6",
+    "sphinx-autobuild>=2021.3.14",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx-autoapi>=3.0.0",
+    "pydata-sphinx-theme>=0.14.3",
+    "sphinx-toolbox>=3.5.0",
+    "sphinx-notfound-page>=1.0.0",
+]
 
-[tool.poetry.group.test.dependencies]
-pytest = "^7.4.2"
+[tool.pdm.scripts]
+manage.cmd = "python manage.py"
+manage.help = "Manage the project's development"
 
-[tool.poetry.group.docs.dependencies]
-sphinx = "^7.2.6"
-furo = "^2023.9.10"
-sphinx-autobuild = "^2021.3.14"
-sphinx-copybutton = "^0.5.2"
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
 [tool.ruff]
-ignore = ["E402"]
+select = ["ALL"]
+ignore = [
+    "E402",  # sometimes it's necessary to run code before an import
+    "D1",  # TODO: Remove once public API is documented
+    "SIM102",  # Nested if is fine
+    "A003",  # Class attributes can use builtin names
+    "EM",  # String literals in raise is fine
+    "ANN101",  # no need to annotate self
+    "ANN102",  # no need to annotate cls
+    "ANN401",  # Any is fine
+    "TRY003",  # Fine to specify error message in raise directly
+    "PLR2004",  # Some "magic" values are fine (For example, 3 or 4 for the number of RGB/RGBA coordinates)
+    "BLE",  # catching Exception is fine
+    "COM812",  # trailing comma. Doesn't work well with formatter
+    "TD002",  # no need for author in todo
+    "TD003",  # no need for issue in todo
+    "FIX",  # Fine to commit todo comments
+    "PLW1510",  # no need for explicit check argument in `subprocess.run`
+    "S603",  # no need for warning about input validation with subprocess
+    "S607",  # partial paths for subprocess are fine (but should be used with care)
+    "ISC001",  # conflicts with formatter
+]
 ignore-init-module-imports = true
-unfixable = ["ALL"]
+
+[tool.ruff.per-file-ignores]
+"tests/**/*.py" = [
+    "S101"  # ignore assert in tests
+]
+"docs/source/conf.py" = [
+    "INP",  # ignore implicit namespace warning
+]
+"examples/**/*.py" = [
+    "INP",  # ignore implicit namespace warning
+    "ANN",  # no need for type annotation warnings in examples
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["physiscript"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
 ]
 testpaths = ["tests"]
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+filterwarnings = [
+    "ignore::DeprecationWarning"  # TODO: Fix the warnings in tests
+]
