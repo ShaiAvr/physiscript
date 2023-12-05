@@ -9,7 +9,6 @@ import pyperclip
 __all__ = ["Color", "ColorLike", "get_clipboard", "set_clipboard"]
 
 
-# noinspection PyShadowingNames
 @final
 class Color:
     """A utility class for representing colors and converting between color formats.

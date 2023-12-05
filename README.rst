@@ -1,5 +1,5 @@
 ===========
-Physiscript
+PhysiScript
 ===========
 .. image:: https://img.shields.io/badge/License-MIT-red.svg
    :target: https://opensource.org/licenses/MIT

@@ -1,4 +1,4 @@
-# ruff: noqa: PLR0913
+# ruff: noqa: PLR0913, INP001
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, NamedTuple, Self
 import imgui
 from imgui.integrations.pygame import PygameRenderer
 
-# noinspection PyProtectedMember
 from physiscript._internal.singleton import Singleton
 from physiscript.utils import Color, ColorLike
 
@@ -95,7 +94,6 @@ class Condition(Enum):
     APPEARING: int = imgui.APPEARING
 
 
-# noinspection PyMethodMayBeStatic
 class UIManager(metaclass=Singleton):
     _context: Any
     _impl: PygameRenderer
@@ -165,7 +163,6 @@ class UIManager(metaclass=Singleton):
         flags |= (not mouse_scroll) * imgui.WINDOW_NO_SCROLL_WITH_MOUSE
         flags |= menubar * imgui.WINDOW_MENU_BAR
         flags |= horizontal_scrollbar * imgui.WINDOW_HORIZONTAL_SCROLLING_BAR
-        # noinspection PyArgumentList
         return BeginEndChild(
             visible=imgui.begin_child(label, width, height, border, flags).visible
         )
@@ -435,7 +432,6 @@ class UIManager(metaclass=Singleton):
         flags |= (not save_settings) * imgui.WINDOW_NO_SAVED_SETTINGS
         flags |= menubar * imgui.WINDOW_MENU_BAR
         flags |= horizontal_scrollbar * imgui.WINDOW_HORIZONTAL_SCROLLING_BAR
-        # noinspection PyTypeChecker
         res = imgui.begin_popup_modal(label, None, flags)
         return BeginEndPopupModal(opened=res.opened, visible=res.visible)
 

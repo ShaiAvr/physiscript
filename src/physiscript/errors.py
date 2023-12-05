@@ -1,4 +1,8 @@
-__all__ = ["SingletonError", "PackageInitializationError"]
+__all__ = [
+    "SingletonError",
+    "PackageInitializationError",
+    "ApplicationInitializationError",
+]
 
 
 class SingletonError(Exception):
@@ -6,4 +10,8 @@ class SingletonError(Exception):
 
 
 class PackageInitializationError(Exception):
+    pass
+
+
+class ApplicationInitializationError(Exception):
     pass

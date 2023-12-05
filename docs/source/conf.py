@@ -22,7 +22,6 @@ if CODE_URL.endswith("/"):
 
 project = "physiscript"
 author = "Shai Avraham"
-# noinspection PyShadowingBuiltins
 copyright = f"2023, {author}"  # noqa: A001
 release = physiscript.__version__
 
