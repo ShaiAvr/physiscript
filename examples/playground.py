@@ -14,18 +14,12 @@ logger.add(
     ),
 )
 
-import imgui
-
 from physiscript import App
 
-app = App(1600, 900, clear_color=(0.08, 0.16, 0.18), fps=60, exit_on_escape=False)
-ui = app.ui()
-
-option = 0
+app = App(1600, 900)
 
 while app.running:
     app.start_frame()
-    imgui.show_demo_window()
     app.update()
 
 app.shutdown()

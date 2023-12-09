@@ -1,27 +1,24 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Self
 
 import glfw
 from loguru import logger
 
 import physiscript
-from physiscript._internal.singleton import Singleton
+from physiscript.core._singleton import Singleton
+from physiscript.core._window import Window
 from physiscript.errors import ApplicationInitializationError
 
 if TYPE_CHECKING:
     from types import TracebackType
 
+
 __all__ = ["App"]
 
 
 class App(metaclass=Singleton):
-    _width: int
-    _height: int
-    _title: str
-    _vsync: bool
-
-    _window: Any
+    _window: Window
 
     def __init__(
         self,
@@ -31,10 +28,6 @@ class App(metaclass=Singleton):
         *,
         vsync: bool = True,
     ) -> None:
-        self._width = width
-        self._height = height
-        self._vsync = vsync
-
         # TODO: Add GUI logger
 
         logger.info("physiscript version: {}", physiscript.__version__)
@@ -44,26 +37,32 @@ class App(metaclass=Singleton):
         if not glfw.init():
             raise ApplicationInitializationError("Failed to initialize GLFW")
 
-        glfw.window_hint(glfw.RESIZABLE, False)  # noqa: FBT003
-        glfw.window_hint(glfw.DOUBLEBUFFER, True)  # noqa: FBT003
-        glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
-
         logger.trace("GLFW version: {}", glfw.get_version_string().decode())
 
-        self._window = glfw.create_window(width, height, title, None, None)
-        if not self._window:
-            raise ApplicationInitializationError("Failed to create GLFW window")
-        glfw.make_context_current(self._window)
-        glfw.swap_interval(int(vsync))
+        self._window = Window(width, height, title, vsync=vsync)
 
     def shutdown(self) -> None:
         cls = type(self)
         if not cls._remove():
             return
         logger.info("Shutting down the app")
-        glfw.destroy_window(self._window)
+        self._window.close()
         glfw.terminate()
         logger.success("App was successfully shut down")
+
+    @property
+    def running(self) -> bool:
+        return not self._window.should_close()
+
+    @running.setter
+    def running(self, value: bool) -> None:
+        self._window.set_should_close(value)
+
+    def start_frame(self) -> None:
+        pass
+
+    def update(self) -> float:
+        pass
 
     def __enter__(self) -> Self:
         return self
@@ -79,28 +78,31 @@ class App(metaclass=Singleton):
 
     @property
     def screen_width(self) -> int:
-        return self._width
+        return self._window.width
 
     @property
     def screen_height(self) -> int:
-        return self._height
+        return self._window.height
 
     @property
     def screen_size(self) -> tuple[int, int]:
-        return (self._width, self._height)
+        return self._window.size
 
     @property
     def title(self) -> str:
-        return self._title
+        return self._window.title
 
     @title.setter
     def title(self, title: str) -> None:
-        self._title = title
-        glfw.set_window_title(self._window, title)
+        self._window.title = title
 
     @property
     def vsync(self) -> bool:
-        return self._vsync
+        return self._window.vsync
+
+    @vsync.setter
+    def vsync(self, vsync: bool) -> None:
+        self._window.vsync = vsync
 
     @staticmethod
     def _glfw_error_callback(error: int, description: str) -> None:

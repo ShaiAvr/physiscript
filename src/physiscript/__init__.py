@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import os
 from importlib.metadata import PackageMetadata, PackageNotFoundError, metadata
-
-os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 
 __all__ = ["App", "HOMEPAGE", "REPOSITORY"]
 
@@ -44,4 +41,4 @@ else:
     # application
     del package_info
 
-from physiscript.app import App
+from physiscript.core.app import App
