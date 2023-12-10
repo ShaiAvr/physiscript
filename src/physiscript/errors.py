@@ -2,7 +2,6 @@ __all__ = [
     "SingletonError",
     "PackageInitializationError",
     "ApplicationInitializationError",
-    "WindowError",
 ]
 
 
@@ -15,8 +14,4 @@ class PackageInitializationError(Exception):
 
 
 class ApplicationInitializationError(Exception):
-    pass
-
-
-class WindowError(Exception):
     pass
