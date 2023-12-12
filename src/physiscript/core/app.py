@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import platform
+from time import sleep
 from typing import TYPE_CHECKING, Any, Self
 
 import glfw
@@ -23,13 +25,25 @@ class App(metaclass=Singleton):
     _title: str
     _vsync: bool
 
-    def __init__(
+    limit_fps: bool
+    _target_fps: int
+    enable_idling: bool
+    _fps_idle: int
+    _is_idling: bool = False
+
+    _frame_start: float
+
+    def __init__(  # noqa: PLR0913
         self,
         width: int,
         height: int,
         title: str = "PhysiScript App",
         *,
         vsync: bool = True,
+        limit_fps: bool = False,
+        target_fps: int = 60,
+        enable_idling: bool = False,
+        fps_idle: int = 10,
     ) -> None:
         # TODO: Add GUI logger
 
@@ -44,12 +58,20 @@ class App(metaclass=Singleton):
 
         glfw.window_hint(glfw.RESIZABLE, False)  # noqa: FBT003
         glfw.window_hint(glfw.DOUBLEBUFFER, True)  # noqa: FBT003
+        glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
+        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+        if platform.system() == "Darwin":
+            glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, True)  # noqa: FBT003
 
         self._width = width
         self._height = height
         self._title = title
         self._vsync = vsync
+        self.limit_fps = limit_fps
+        self.target_fps = target_fps
+        self.enable_idling = enable_idling
+        self.fps_idle = fps_idle
 
         self._window = glfw.create_window(width, height, title, None, None)
         if not self._window:
@@ -76,11 +98,30 @@ class App(metaclass=Singleton):
         glfw.set_window_should_close(self._window, value)
 
     def start_frame(self) -> None:
-        pass
+        self._frame_start = glfw.get_time()
 
     def update(self) -> float:
         glfw.swap_buffers(self._window)
-        # Poll events
+        self._is_idling = False
+        poll_events = True
+        if self.enable_idling:
+            wait_timeout = 1 / self._fps_idle
+            before_time = glfw.get_time()
+            glfw.wait_events_timeout(wait_timeout)
+            poll_events = False
+            after_time = glfw.get_time()
+            wait_duration = after_time - before_time
+            self._is_idling = wait_duration > wait_timeout * 0.9
+        if self.limit_fps:
+            now = glfw.get_time()
+            frame_duration = now - self._frame_start
+            timeout = 1 / self._target_fps - frame_duration
+            if timeout > 0:
+                sleep(timeout)
+        if poll_events:
+            glfw.poll_events()
+        frame_end = glfw.get_time()
+        return frame_end - self._frame_start
 
     def __enter__(self) -> Self:
         return self
@@ -124,6 +165,30 @@ class App(metaclass=Singleton):
         self._vsync = vsync
         glfw.swap_interval(int(vsync))
 
+    @property
+    def target_fps(self) -> int:
+        return self._target_fps
+
+    @target_fps.setter
+    def target_fps(self, fps: int) -> None:
+        if fps <= 0:
+            raise ValueError("FPS must be positive")
+        self._target_fps = fps
+
+    @property
+    def fps_idle(self) -> int:
+        return self._fps_idle
+
+    @fps_idle.setter
+    def fps_idle(self, fps: int) -> None:
+        if fps <= 0:
+            raise ValueError("FPS must be positive")
+        self._fps_idle = fps
+
+    @property
+    def is_idling(self) -> bool:
+        return self._is_idling
+
     @staticmethod
     def _glfw_error_callback(error: int, description: str) -> None:
-        logger.error("GLFW error [{}]: {}", error, description)
+        logger.error("GLFW error [{}]: {}", error, description.decode())
